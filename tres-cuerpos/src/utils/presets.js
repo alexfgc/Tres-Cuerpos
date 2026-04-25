@@ -1,4 +1,4 @@
-import { calculateAllLagrangePoints } from '../physics/lagrangePoints'
+import { calculateAllLagrangePoints } from '../physics/lagrangePoints.js'
 
 export const PRESETS = {
   JWST_L2: 'JWST_L2',

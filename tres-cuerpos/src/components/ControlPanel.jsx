@@ -1,11 +1,21 @@
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import PresetSelector from './PresetSelector'
 
-function Slider({ disabled, formatValue = (value) => value.toFixed(3), label, max, min, onChange, step, value }) {
+function Slider({
+  disabled,
+  formatValue = (value) => value.toFixed(3),
+  helpText,
+  label,
+  max,
+  min,
+  onChange,
+  step,
+  value,
+}) {
   return (
     <label className="block">
       <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-wide text-white/70">
-        <span>{label}</span>
+        <span title={helpText}>{label}</span>
         <span className="font-mono text-white/90">{formatValue(value)}</span>
       </div>
       <input
@@ -37,9 +47,9 @@ function ControlPanel({
   onChangeShowTrajectory,
   onChangeTrajectoryLimit,
   onLoadPreset,
-  onPlayPause,
   onReset,
-  onSystemChange,
+  onCopyShareLink,
+  onPlayPause,
   presets,
   selectedPreset,
   selectedSystemKey,
@@ -48,6 +58,7 @@ function ControlPanel({
   trajectoryLimit,
   simulationSpeed,
   showTrajectory,
+  shareStatus,
 }) {
   const buttonLabel = isRunning ? 'Pausar' : 'Play'
 
@@ -59,6 +70,7 @@ function ControlPanel({
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           className="flex items-center justify-center gap-2 rounded-lg border border-accent/60 bg-accent/15 px-3 py-2 text-sm font-medium transition hover:bg-accent/25"
+          title={isRunning ? 'Pausa la simulacion y conserva el estado actual.' : 'Inicia la integracion RK4.'}
           onClick={onPlayPause}
           type="button"
         >
@@ -67,6 +79,7 @@ function ControlPanel({
         </button>
         <button
           className="flex items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/5 px-3 py-2 text-sm font-medium transition hover:bg-white/10"
+          title="Vuelve al estado inicial del preset o de los sliders manuales."
           onClick={onReset}
           type="button"
         >
@@ -75,11 +88,21 @@ function ControlPanel({
         </button>
       </div>
 
+      <button
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/5 px-3 py-2 text-sm font-medium transition hover:bg-white/10"
+        title="Copia un enlace reproducible con la configuracion actual de la simulacion."
+        onClick={onCopyShareLink}
+        type="button"
+      >
+        Compartir config
+      </button>
+      {shareStatus ? <p className="mt-2 text-xs text-white/60">{shareStatus}</p> : null}
       <div className="mt-5 space-y-2 text-sm text-white/80">
         <label className="block">
           <span className="mb-1 block text-xs uppercase tracking-wide text-white/70">Sistema binario</span>
           <select
             className="w-full rounded-lg border border-white/30 bg-black/50 px-3 py-2 text-sm text-white"
+            title="Cambia la masa reducida y recoloca los cuerpos primarios en la escena."
             onChange={(event) => onSystemChange(event.target.value)}
             value={selectedSystemKey}
           >
@@ -103,6 +126,7 @@ function ControlPanel({
       <div className="mt-5 space-y-3">
         <Slider
           disabled={!canEditInitialState}
+          helpText="Coordenada X inicial del tercer cuerpo en el marco rotante."
           label="Posicion X"
           max={2}
           min={-2}
@@ -112,6 +136,7 @@ function ControlPanel({
         />
         <Slider
           disabled={!canEditInitialState}
+          helpText="Coordenada Y inicial del tercer cuerpo en el marco rotante."
           label="Posicion Y"
           max={2}
           min={-2}
@@ -121,6 +146,7 @@ function ControlPanel({
         />
         <Slider
           disabled={!canEditInitialState}
+          helpText="Coordenada Z inicial del tercer cuerpo."
           label="Posicion Z"
           max={2}
           min={-2}
@@ -133,6 +159,7 @@ function ControlPanel({
       <div className="mt-5 space-y-3">
         <Slider
           disabled={!canEditInitialState}
+          helpText="Velocidad inicial en X del tercer cuerpo."
           label="Velocidad VX"
           max={2}
           min={-2}
@@ -142,6 +169,7 @@ function ControlPanel({
         />
         <Slider
           disabled={!canEditInitialState}
+          helpText="Velocidad inicial en Y del tercer cuerpo."
           label="Velocidad VY"
           max={2}
           min={-2}
@@ -151,6 +179,7 @@ function ControlPanel({
         />
         <Slider
           disabled={!canEditInitialState}
+          helpText="Velocidad inicial en Z del tercer cuerpo."
           label="Velocidad VZ"
           max={2}
           min={-2}
@@ -163,6 +192,7 @@ function ControlPanel({
       <div className="mt-5">
         <Slider
           disabled={false}
+          helpText="Paso base del integrador RK4. Valores pequenos mejoran estabilidad pero cuestan mas CPU."
           label="Timestep"
           max={0.1}
           min={0.001}
@@ -175,6 +205,7 @@ function ControlPanel({
       <div className="mt-5">
         <Slider
           disabled={false}
+          helpText="Multiplicador visual del avance por frame; no cambia el parametro fisico dt."
           label="Velocidad animacion"
           max={100}
           min={1}
@@ -189,6 +220,7 @@ function ControlPanel({
           <input
             checked={showLagrange}
             className="accent-accent"
+            title="Muestra u oculta los cinco puntos de Lagrange."
             onChange={(event) => onChangeShowLagrange(event.target.checked)}
             type="checkbox"
           />
@@ -198,6 +230,7 @@ function ControlPanel({
           <input
             checked={showTrajectory}
             className="accent-accent"
+            title="Muestra u oculta la trayectoria acumulada."
             onChange={(event) => onChangeShowTrajectory(event.target.checked)}
             type="checkbox"
           />
@@ -207,6 +240,7 @@ function ControlPanel({
           <input
             checked={showHillCurves}
             className="accent-accent"
+            title="Muestra una aproximacion visual de las curvas de Hill."
             onChange={(event) => onChangeShowHillCurves(event.target.checked)}
             type="checkbox"
           />
@@ -218,6 +252,7 @@ function ControlPanel({
         <Slider
           disabled={false}
           formatValue={(value) => String(Math.round(value))}
+          helpText="Cantidad maxima de puntos conservados en la trayectoria."
           label="Limite muestras"
           max={20000}
           min={500}

@@ -105,14 +105,21 @@ function Scene3D({
         color: 0xffd700,
         emissive: 0xffd700,
         emissiveIntensity: 0.5,
+        metalness: 0,
+        roughness: 0.3,
       }),
     )
     sun.position.set(-mu, 0, 0)
+    sun.userData = { type: 'sun' }
     scene.add(sun)
 
     const earth = new THREE.Mesh(
       new THREE.SphereGeometry(0.03, 32, 32),
-      new THREE.MeshStandardMaterial({ color: 0x4a90e2 }),
+      new THREE.MeshStandardMaterial({
+        color: 0x4a90e2,
+        metalness: 0.1,
+        roughness: 0.6,
+      }),
     )
     earth.position.set(1 - mu, 0, 0)
     scene.add(earth)
@@ -345,6 +352,12 @@ function Scene3D({
         lagrangeGlow.scale.setScalar(pulse)
         lagrangeGlow.material.opacity = lagrangeGlow.userData.baseOpacity * pulse
         lagrangeGlow.visible = displayLagrange
+      }
+      
+      // Animar brillo del Sol
+      if (sun.material) {
+        const sunPulse = 0.5 + 0.3 * Math.sin(timeRef.current * 1.5)
+        sun.material.emissiveIntensity = sunPulse
       }
       trajectory.visible = displayTrajectory
       hillPoints.visible = displayHillCurves

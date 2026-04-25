@@ -2,6 +2,7 @@ function collinearEquation(x, mu) {
   const r1 = Math.abs(x + mu)
   const r2 = Math.abs(x - 1 + mu)
 
+  // Solve the x-axis equilibrium condition with y = z = 0.
   return x - ((1 - mu) * (x + mu)) / r1 ** 3 - (mu * (x - 1 + mu)) / r2 ** 3
 }
 
@@ -15,6 +16,7 @@ function collinearDerivative(x, mu) {
 function newtonRaphson(f, df, x0, tolerance = 1e-12, maxIter = 100) {
   let x = x0
 
+  // Iterate until the root stabilizes or the solver gives up.
   for (let i = 0; i < maxIter; i += 1) {
     const fx = f(x)
     const dfx = df(x)

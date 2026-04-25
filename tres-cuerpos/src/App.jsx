@@ -7,22 +7,76 @@ import { getPresetState, PRESETS } from './utils/presets'
 
 const Scene3D = lazy(() => import('./components/Scene3D'))
 
+function parseNumber(value, fallback) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function isPresetKey(value) {
+  return Object.values(PRESETS).includes(value)
+}
+
+function getInitialConfigFromUrl() {
+  if (typeof window === 'undefined') {
+    return {
+      activePreset: PRESETS.JWST_L2,
+      dt: DEFAULT_DT,
+      initialState: getPresetState(PRESETS.JWST_L2, BINARY_SYSTEMS[DEFAULT_SYSTEM_KEY].mu),
+      selectedSystemKey: DEFAULT_SYSTEM_KEY,
+      showHillCurves: false,
+      showLagrange: true,
+      showTrajectory: true,
+      simulationSpeed: 10,
+      trajectoryLimit: 5000,
+    }
+  }
+
+  const params = new URLSearchParams(window.location.search)
+  const selectedSystemKey = BINARY_SYSTEMS[params.get('system')] ? params.get('system') : DEFAULT_SYSTEM_KEY
+  const mu = BINARY_SYSTEMS[selectedSystemKey].mu
+  const presetValue = params.get('preset')
+  const activePreset = isPresetKey(presetValue) ? presetValue : PRESETS.JWST_L2
+
+  const initialState = activePreset === PRESETS.CUSTOM
+    ? {
+        x: parseNumber(params.get('x'), 1.01),
+        y: parseNumber(params.get('y'), 0),
+        z: parseNumber(params.get('z'), 0.01),
+        vx: parseNumber(params.get('vx'), 0),
+        vy: parseNumber(params.get('vy'), 0.1),
+        vz: parseNumber(params.get('vz'), 0),
+      }
+    : getPresetState(activePreset, mu)
+
+  return {
+    activePreset,
+    dt: parseNumber(params.get('dt'), DEFAULT_DT),
+    initialState,
+    selectedSystemKey,
+    showHillCurves: params.get('showHillCurves') === 'true',
+    showLagrange: params.get('showLagrange') !== 'false',
+    showTrajectory: params.get('showTrajectory') !== 'false',
+    simulationSpeed: parseNumber(params.get('speed'), 10),
+    trajectoryLimit: parseNumber(params.get('trajectoryLimit'), 5000),
+  }
+}
+
 function App() {
-  const [systemKey, setSystemKey] = useState(DEFAULT_SYSTEM_KEY)
+  const [initialConfig] = useState(() => getInitialConfigFromUrl())
+  const [systemKey, setSystemKey] = useState(initialConfig.selectedSystemKey)
   const mu = BINARY_SYSTEMS[systemKey].mu
 
-  const [initialState, setInitialState] = useState(
-    getPresetState(PRESETS.JWST_L2, BINARY_SYSTEMS[DEFAULT_SYSTEM_KEY].mu),
-  )
+  const [initialState, setInitialState] = useState(initialConfig.initialState)
   const [isRunning, setIsRunning] = useState(false)
-  const [activePreset, setActivePreset] = useState(PRESETS.JWST_L2)
-  const [dt, setDt] = useState(DEFAULT_DT)
-  const [simulationSpeed, setSimulationSpeed] = useState(10)
-  const [showLagrange, setShowLagrange] = useState(true)
-  const [showTrajectory, setShowTrajectory] = useState(true)
-  const [showHillCurves, setShowHillCurves] = useState(false)
-  const [trajectoryLimit, setTrajectoryLimit] = useState(5000)
+  const [activePreset, setActivePreset] = useState(initialConfig.activePreset)
+  const [dt, setDt] = useState(initialConfig.dt)
+  const [simulationSpeed, setSimulationSpeed] = useState(initialConfig.simulationSpeed)
+  const [showLagrange, setShowLagrange] = useState(initialConfig.showLagrange)
+  const [showTrajectory, setShowTrajectory] = useState(initialConfig.showTrajectory)
+  const [showHillCurves, setShowHillCurves] = useState(initialConfig.showHillCurves)
+  const [trajectoryLimit, setTrajectoryLimit] = useState(initialConfig.trajectoryLimit)
   const [resetConfig, setResetConfig] = useState({ id: 0, smooth: false })
+  const [shareStatus, setShareStatus] = useState('')
   const [telemetry, setTelemetry] = useState({
     time: 0,
     state: initialState,
@@ -116,6 +170,35 @@ function App() {
     setTelemetry(nextTelemetry)
   }, [])
 
+  const buildShareUrl = () => {
+    const params = new URLSearchParams()
+    params.set('system', systemKey)
+    params.set('preset', activePreset)
+    params.set('dt', String(dt))
+    params.set('speed', String(simulationSpeed))
+    params.set('trajectoryLimit', String(trajectoryLimit))
+    params.set('showLagrange', String(showLagrange))
+    params.set('showTrajectory', String(showTrajectory))
+    params.set('showHillCurves', String(showHillCurves))
+    params.set('x', String(initialState.x))
+    params.set('y', String(initialState.y))
+    params.set('z', String(initialState.z))
+    params.set('vx', String(initialState.vx))
+    params.set('vy', String(initialState.vy))
+    params.set('vz', String(initialState.vz))
+    return `${window.location.origin}${window.location.pathname}?${params.toString()}`
+  }
+
+  const handleCopyShareLink = async () => {
+    const shareUrl = buildShareUrl()
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setShareStatus('Enlace copiado')
+    } catch {
+      setShareStatus(shareUrl)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-space-black text-primary">
       <header className="border-b border-white/20 px-6 py-4 md:px-8">
@@ -125,6 +208,31 @@ function App() {
         <p className="mt-1 text-sm text-white/70 md:text-base">
           Simulador 3D del CR3BP y puntos de Lagrange
         </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <section className="rounded-xl border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-white/90">
+              Resumen tecnico
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">
+              La pagina simula el Problema Restringido Circular de los Tres Cuerpos en el marco rotante,
+              integrando la ecuacion de movimiento del tercer cuerpo con RK4. Se visualizan dos masas
+              primarias en sistemas binarios seleccionables, la trayectoria del satelite, los cinco puntos de
+              Lagrange, una aproximacion de las curvas de Hill y el estado numerico de la integracion,
+              incluyendo constante de Jacobi, energia efectiva y distancias a cada primario.
+            </p>
+          </section>
+          <section className="rounded-xl border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-white/90">
+              Explicacion simple
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">
+              Aqui ves como se mueve un objeto pequeno entre dos cuerpos grandes que se atraen entre si,
+              como una nave entre un planeta y su luna. La simulacion te deja cambiar la situacion inicial,
+              ver hacia donde se va el objeto y descubrir algunos lugares especiales donde las fuerzas se
+              compensan o donde la trayectoria se vuelve mas delicada e inestable.
+            </p>
+          </section>
+        </div>
       </header>
 
       <section className="grid gap-4 p-4 md:grid-cols-[320px_minmax(0,1fr)] md:p-6">
@@ -146,6 +254,7 @@ function App() {
           onLoadPreset={handlePresetLoad}
           onPlayPause={handlePlayPause}
           onReset={handleReset}
+          onCopyShareLink={handleCopyShareLink}
           onSystemChange={handleSystemChange}
           presets={PRESETS}
           selectedPreset={activePreset}
@@ -154,6 +263,7 @@ function App() {
           showLagrange={showLagrange}
           simulationSpeed={simulationSpeed}
           showTrajectory={showTrajectory}
+          shareStatus={shareStatus}
         />
         <Suspense
           fallback={

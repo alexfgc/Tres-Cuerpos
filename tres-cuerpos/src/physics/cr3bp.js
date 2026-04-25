@@ -4,6 +4,7 @@ function safeDistance(value) {
 
 function distances(state, mu) {
   const { x, y, z } = state
+  // Distances from the third body to the primary masses in normalized coordinates.
   const r1 = safeDistance(Math.sqrt((x + mu) ** 2 + y ** 2 + z ** 2))
   const r2 = safeDistance(Math.sqrt((x - 1 + mu) ** 2 + y ** 2 + z ** 2))
   return { r1, r2 }
@@ -24,6 +25,7 @@ export function calculateJacobi(state, mu) {
   const { x, y, vx, vy, vz } = state
   const { r1, r2 } = distances(state, mu)
 
+  // Jacobi's constant is the key conserved quantity in the rotating frame.
   const omega = 0.5 * (x ** 2 + y ** 2) + (1 - mu) / r1 + mu / r2
   const speedSquared = vx ** 2 + vy ** 2 + vz ** 2
 

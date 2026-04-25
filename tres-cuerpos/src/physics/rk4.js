@@ -23,6 +23,7 @@ export function norm(state) {
 }
 
 export function rk4Step(derivativeFunc, t, state, dt) {
+  // Sample the derivative field at four points and combine them with the RK4 weights.
   const k1 = derivativeFunc(t, state)
   const k2 = derivativeFunc(t + dt / 2, add(state, scale(k1, dt / 2)))
   const k3 = derivativeFunc(t + dt / 2, add(state, scale(k2, dt / 2)))

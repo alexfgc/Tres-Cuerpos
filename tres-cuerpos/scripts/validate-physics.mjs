@@ -2,6 +2,7 @@ import { calculateJacobi, cr3bpDerivatives } from '../src/physics/cr3bp.js'
 import { calculateAllLagrangePoints } from '../src/physics/lagrangePoints.js'
 import { rk4Step } from '../src/physics/rk4.js'
 import { BINARY_SYSTEMS, DEFAULT_STATE } from '../src/utils/constants.js'
+import { getPresetState, PRESETS } from '../src/utils/presets.js'
 
 function assertCondition(condition, message) {
   if (!condition) {
@@ -59,11 +60,53 @@ function validateJacobiConservation(mu) {
   }
 }
 
+function validatePresetOrbit(mu, presetKey, options) {
+  const {
+    label,
+    threshold,
+    metric,
+    sampleTime = 20,
+    dt = 0.001,
+  } = options
+
+  let state = { ...getPresetState(presetKey, mu) }
+  let t = 0
+  const steps = Math.round(sampleTime / dt)
+  let maxMetric = 0
+
+  for (let i = 0; i < steps; i += 1) {
+    state = rk4Step((time, s) => cr3bpDerivatives(time, s, mu), t, state, dt)
+    t += dt
+    maxMetric = Math.max(maxMetric, metric(state))
+  }
+
+  assertCondition(
+    maxMetric <= threshold,
+    `${label} excede el umbral esperado: ${maxMetric.toFixed(6)} > ${threshold.toFixed(6)}`,
+  )
+
+  return { label, maxMetric, threshold, sampleTime, dt }
+}
+
 function runValidation() {
   const mu = BINARY_SYSTEMS.SUN_EARTH.mu
 
   validateLagrangeOrdering(mu)
   const jacobi = validateJacobiConservation(mu)
+  const jwst = validatePresetOrbit(mu, PRESETS.JWST_L2, {
+    label: 'JWST L2',
+    threshold: 2,
+    metric: (state) => Math.hypot(state.x, state.y, state.z),
+  })
+  const trojan = validatePresetOrbit(mu, PRESETS.TROJAN_L4, {
+    label: 'Troyano L4',
+    threshold: 0.25,
+    metric: (state) => {
+      const l4x = 0.5 - mu
+      const l4y = Math.sqrt(3) / 2
+      return Math.hypot(state.x - l4x, state.y - l4y)
+    },
+  })
 
   console.log('Validacion de fisica completada correctamente.')
   console.log(`mu: ${mu}`)
@@ -71,6 +114,8 @@ function runValidation() {
   console.log(`Error abs max: ${jacobi.maxAbsError.toExponential(3)}`)
   console.log(`Error rel max: ${jacobi.relPercent.toFixed(6)}%`) 
   console.log(`Integracion: ${jacobi.steps} pasos, dt=${jacobi.dt}, tiempo=${jacobi.simulatedTime.toFixed(3)}`)
+  console.log(`${jwst.label}: excursion maxima ${jwst.maxMetric.toFixed(6)} en ${jwst.sampleTime.toFixed(1)} unidades`)
+  console.log(`${trojan.label}: distancia maxima a L4 ${trojan.maxMetric.toFixed(6)} en ${trojan.sampleTime.toFixed(1)} unidades`)
 }
 
 try {

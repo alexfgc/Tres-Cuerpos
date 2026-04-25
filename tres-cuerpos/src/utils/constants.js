@@ -13,6 +13,7 @@ export const BINARY_SYSTEMS = {
   },
 }
 
+export const DEFAULT_SYSTEM_KEY = 'SUN_EARTH'
 export const DEFAULT_MU = BINARY_SYSTEMS.SUN_EARTH.mu
 export const DEFAULT_DT = 0.01
 

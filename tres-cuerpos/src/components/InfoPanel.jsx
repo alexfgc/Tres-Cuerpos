@@ -373,6 +373,185 @@ function InfoPanel({ energy, initialJacobi, jacobi, r1, r2, state, time }) {
           </section>
         </article>
       </section>
+
+      <section className="mt-6 rounded-xl border border-white/15 bg-black/25 p-4 md:p-5">
+        <h3 className="font-display text-base font-semibold text-white">De la fisica al codigo</h3>
+
+        <article className="mt-4 space-y-6 text-sm leading-relaxed text-white/75">
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">El principio fundamental: discretizar el tiempo</h4>
+            <p>
+              Las ecuaciones del CR3BP son <strong>ecuaciones diferenciales continuas</strong>: describen cómo cambia el estado del satélite en cada instante infinitesimal. Un ordenador no puede operar con infinitos; necesita saltar de un instante al siguiente en pasos discretos de tamaño <InlineLatex math={'\Delta t'} />.
+            </p>
+            <p>
+              La pregunta central del simulador es: dado el estado del satélite en el instante <InlineLatex math={'t_n'} />, ¿cómo se calcula el estado en <InlineLatex math={'t_{n+1} = t_n + \Delta t'} />?
+            </p>
+            <p>Toda la cadena de archivos de código es la respuesta a esa pregunta.</p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">El vector de estado: la física comprimida en 6 números</h4>
+            <p>
+              Las ecuaciones del CR3BP son de <strong>segundo orden</strong> (contienen <InlineLatex math={'\ddot{x}'} />, <InlineLatex math={'\ddot{y}'} />, <InlineLatex math={'\ddot{z}'} />). Para aplicar RK4, que opera sobre sistemas de primer orden, se introduce el truco estándar de convertir las velocidades en variables independientes.
+            </p>
+            <p>Se define el <strong>vector de estado</strong>:</p>
+            <div className="overflow-x-auto text-white/90">
+              <BlockLatex math={'\mathbf{y} = (x,\; y,\; z,\; v_x,\; v_y,\; v_z)^\top'} />
+            </div>
+            <p>Con él, el sistema de segundo orden se reescribe como:</p>
+            <div className="overflow-x-auto text-white/90">
+              <BlockLatex math={'\frac{d\mathbf{y}}{dt} = \mathbf{f}(t, \mathbf{y}) = \begin{pmatrix}v_x \\ v_y \\ v_z \\ a_x(x,y,z,v_x,v_y) \\ a_y(x,y,z,v_x,v_y) \\ a_z(x,y,z)\end{pmatrix}'} />
+            </div>
+            <p>donde las aceleraciones son las ecuaciones del CR3BP derivadas en la sección anterior. En el código, el vector de estado se representa como un objeto JavaScript:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`state = {
+  x, y, z,    // posicion en el marco rotante
+  vx, vy, vz  // velocidad en el marco rotante
+}`}</code></pre>
+            <p>
+              El estado es <strong>todo lo que se necesita</strong> para determinar la evolución futura del satélite. Dos satélites con el mismo estado en <InlineLatex math={'t_0'} /> seguirán exactamente la misma trayectoria: el sistema es determinista.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">El núcleo físico: cr3bpDerivatives</h4>
+            <p>El archivo src/physics/cr3bp.js contiene la función que implementa directamente las ecuaciones del CR3BP. Cada línea tiene correspondencia exacta con la física:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`function cr3bpDerivatives(t, state, mu) {
+  const {x, y, z, vx, vy, vz} = state;
+
+  // Distancias a cada masa principal
+  const r1 = Math.sqrt((x + mu)**2 + y**2 + z**2);
+  const r2 = Math.sqrt((x - 1 + mu)**2 + y**2 + z**2);
+
+  // Aceleraciones: ecuaciones completas del CR3BP
+  const ax = 2*vy + x - (1-mu)*(x+mu)/r1**3 - mu*(x-1+mu)/r2**3;
+  const ay = -2*vx + y - (1-mu)*y/r1**3 - mu*y/r2**3;
+  const az = -(1-mu)*z/r1**3 - mu*z/r2**3;
+
+  // Derivada del estado = (velocidades, aceleraciones)
+  return {x: vx, y: vy, z: vz, vx: ax, vy: ay, vz: az};
+}`}</code></pre>
+            <p>La correspondencia entre física y código es directa y sin aproximaciones:</p>
+            <div className="overflow-x-auto text-white/90">
+              <BlockLatex math={'\begin{array}{ll}\text{Ecuación física} & \text{Línea de código}\\\hline r_1 = \sqrt{(x+\mu)^2 + y^2 + z^2} & \texttt{Math.sqrt((x + mu)**2 + y**2 + z**2)}\\ \ddot{x} = 2\dot{y} + x - \frac{(1-\mu)(x+\mu)}{r_1^3} - \frac{\mu(x-1+\mu)}{r_2^3} & \texttt{ax = 2*vy + x - (1-mu)*(x+mu)/r1**3 - ...}\\ \ddot{y} = -2\dot{x} + y - \frac{(1-\mu)y}{r_1^3} - \frac{\mu y}{r_2^3} & \texttt{ay = -2*vx + y - (1-mu)*y/r1**3 - ...}\\ \ddot{z} = -\frac{(1-\mu)z}{r_1^3} - \frac{\mu z}{r_2^3} & \texttt{az = -(1-mu)*z/r1**3 - mu*z/r2**3}\end{array}'} />
+            </div>
+            <p>
+              Los términos <InlineLatex math={'+2*vy'} /> en <InlineLatex math={'ax'} /> y <InlineLatex math={'-2*vx'} /> en <InlineLatex math={'ay'} /> son la <strong>aceleración de Coriolis</strong> en el marco rotante. Si se omitieran, las trayectorias serían físicamente incorrectas aunque el integrador fuera perfecto.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">El integrador: rk4Step</h4>
+            <p>El archivo src/physics/rk4.js implementa el integrador. Es <strong>completamente genérico</strong>: no sabe nada del CR3BP. Recibe cualquier función de derivadas y avanza el estado:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`export function rk4Step(derivativeFunc, t, state, dt) {
+  const k1 = derivativeFunc(t, state);
+  const k2 = derivativeFunc(t + dt/2, add(state, scale(k1, dt/2)));
+  const k3 = derivativeFunc(t + dt/2, add(state, scale(k2, dt/2)));
+  const k4 = derivativeFunc(t + dt,   add(state, scale(k3, dt)));
+
+  return add(state, scale(
+    add(k1, add(scale(add(k2, k3), 2), k4)),
+    dt/6
+  ));
+}`}</code></pre>
+            <p>Las funciones auxiliares add y scale operan componente a componente sobre el objeto de estado. Por ejemplo:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`// scale multiplica cada componente por un escalar
+scale({x:1, y:2, vx:3, ...}, 0.5)
+//  => {x:0.5, y:1, vx:1.5, ...}
+
+// add suma componente a componente
+add({x:1, vx:2, ...}, {x:3, vx:4, ...})
+//  => {x:4, vx:6, ...}`}</code></pre>
+            <p>La conexión entre los dos archivos ocurre en el loop de animación dentro de Scene3D.jsx:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`// En cada frame, si la simulacion esta corriendo:
+satelliteState = rk4Step(
+  (t, state) => cr3bpDerivatives(t, state, mu),
+  time,
+  satelliteState,
+  dt
+);`}</code></pre>
+            <p>
+              rk4Step llama a cr3bpDerivatives exactamente <strong>4 veces</strong> por frame, una por cada <InlineLatex math={'k_i'} />. Cada llamada evalúa las ecuaciones completas del CR3BP con el estado intermedio correspondiente, tal como exige el esquema RK4.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">Los Puntos de Lagrange: analítico vs. numérico</h4>
+            <p>El archivo src/physics/lagrangePoints.js implementa las dos estrategias que la teoría dicta para cada tipo de punto:</p>
+
+            <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">L4 y L5 --- fórmula exacta</h5>
+            <p>La solución analítica <InlineLatex math={'r_1 = r_2 = 1'} /> se traduce directamente a código sin ninguna aproximación:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`export function calculateL4L5(mu) {
+  const x = 0.5 - mu;
+  const y = Math.sqrt(3) / 2;
+  return {
+    L4: { x,  y,  z: 0 },
+    L5: { x,  y: -y, z: 0 }
+  };
+}`}</code></pre>
+
+            <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">L1, L2, L3 --- Newton-Raphson</h5>
+            <p>La condición <InlineLatex math={'\partial U/\partial x = 0'} /> sobre el eje <InlineLatex math={'x'} /> produce una ecuación de quinto grado sin solución analítica. Se resuelve numéricamente con Newton-Raphson:</p>
+            <div className="overflow-x-auto text-white/90">
+              <BlockLatex math={"x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}"} />
+            </div>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`function newtonRaphson(f, df, x0, tolerance, maxIter) { ... }
+
+function calculateL1(mu) { /* punto de inicio entre M1 y M2 */ }
+function calculateL2(mu) { /* punto de inicio mas alla de M2 */ }
+function calculateL3(mu) { /* punto de inicio lado opuesto */  }`}</code></pre>
+            <p>El punto de inicio difiere para cada uno porque la ecuación de quinto grado tiene tres raíces reales separadas y es necesario apuntar al vecindario de cada una para que el método converja al punto correcto.</p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">La validación: por qué el simulador no es una invención</h4>
+            <p>Un simulador físico válido se distingue de una animación arbitraria en que sus resultados concuerdan con las predicciones de la teoría analítica dentro del error numérico esperado. El simulador aplica tres niveles de validación independientes, todos documentados en TASKS.md.</p>
+
+            <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Nivel 1 --- Conservación de la Constante de Jacobi</h5>
+            <p>La teoría garantiza que <InlineLatex math={'C_J = -2U - v^2'} /> es <strong>exactamente constante</strong> a lo largo de cualquier trayectoria real del CR3BP. El simulador la calcula en tiempo real:</p>
+            <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`export function calculateJacobi(state, mu) {
+  const {x, y, z, vx, vy, vz} = state;
+
+  const r1 = Math.sqrt((x + mu)**2 + y**2 + z**2);
+  const r2 = Math.sqrt((x - 1 + mu)**2 + y**2 + z**2);
+
+  const U = -((1-mu)/r1 + mu/r2 + 0.5*(x**2 + y**2));
+  const v2 = vx**2 + vy**2 + vz**2;
+
+  return -2*U - v2;
+}`}</code></pre>
+            <p>
+              Si el integrador fuera incorrecto, <InlineLatex math={'C_J'} /> derivaría con el tiempo de forma sistemática y detectable.
+              El archivo scripts/validate-physics.mjs verificó esta conservación antes del despliegue, con el resultado: “Conservación de Jacobi: error <InlineLatex math={'< 0.1\,\%'} />”.
+            </p>
+            <p>El <InlineLatex math={'0.1\,\%'} /> no es un error del modelo físico sino el <strong>error numérico inevitable de RK4</strong> con el <InlineLatex math={'\Delta t'} /> elegido, completamente esperado y aceptable para visualización interactiva.</p>
+
+            <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Nivel 2 --- Posiciones de los Puntos de Lagrange vs. referencias</h5>
+            <p>Las posiciones calculadas por Newton-Raphson se cotejaron contra valores publicados en la literatura de mecánica celeste. Para el sistema Sol-Tierra (<InlineLatex math={'\mu = 3.04 \times 10^{-6}'} />), los valores de referencia son:</p>
+            <div className="overflow-x-auto text-white/90">
+              <BlockLatex math={'\begin{array}{lcc}\text{Punto} & \text{Posición }x\text{ (unidades norm.)} & \text{Interpretación física}\\\hline L_1 & \approx 0.9900 & \text{Entre Sol y Tierra}\\ L_2 & \approx 1.0100 & \text{Detrás de la Tierra}\\ L_3 & \approx -1.0000 & \text{Lado opuesto al Sol}\end{array}'} />
+            </div>
+            <p>Un error en el Newton-Raphson produciría puntos desplazados respecto a las posiciones físicamente estables, detectable visualmente porque el satélite no permanecería cerca de ellos.</p>
+
+            <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Nivel 3 --- Verificación geométrica de L4 y L5</h5>
+            <p>La solución analítica exige <InlineLatex math={'r_1 = r_2 = 1'} /> en <InlineLatex math={'L_4'} /> y <InlineLatex math={'L_5'} />. Basta calcular numéricamente ambas distancias y verificar que valen exactamente 1. Es una comprobación algebraica trivial pero definitiva, sin margen para errores de redondeo significativos.</p>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">El mapa completo: de la ecuación diferencial a los píxeles</h4>
+            <p>La siguiente tabla resume la cadena completa desde la física continua hasta la representación visual:</p>
+            <div className="overflow-x-auto text-white/90">
+              <BlockLatex math={'\begin{array}{ll}\textbf{Física (continua)} & \textbf{Código (discreto)}\\\hline \text{Ecuaciones del CR3BP }\ddot{x} - 2\dot{y} = \partial U/\partial x & \texttt{cr3bpDerivatives(t, state, mu)}\\ \text{Vector de estado }\mathbf{y} = (x,y,z,v_x,v_y,v_z)^\top & \texttt{state = \{x, y, z, vx, vy, vz\}}\\ \text{Integrador RK4 }\mathbf{y}_{n+1} = \mathbf{y}_n + \frac{\Delta t}{6}(\cdots) & \texttt{rk4Step(...)}\text{ llamado en cada frame}\\ \text{Constante de Jacobi }C_J = -2U - v^2 = \text{cte} & \texttt{calculateJacobi(state, mu), error }<0.1\,\%\\ L_4,L_5\text{: fórmula exacta} & \texttt{calculateL4L5(mu)}\\ L_1,L_2,L_3\text{: ec. de quinto grado} & \texttt{newtonRaphson(...)}\text{ validado vs. papers}\\ \text{Posición }(x,y,z)\text{ en unidades normalizadas} & \texttt{satellite.position.set(state.x, state.y, state.z)}\\ \text{Historia de posiciones (trayectoria)} & \texttt{BufferGeometry, 5,000 puntos FIFO, degradado blanco }\to\text{ cyan}\end{array}'} />
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="font-display text-sm font-semibold text-white">Por qué esto no es una “invención”</h4>
+            <p>La diferencia entre una simulación física válida y una animación arbitraria reside en que los datos de validación concuerdan con las predicciones de la teoría analítica dentro del error numérico esperado.</p>
+            <p>El JWST, lanzado en diciembre de 2021, orbita actualmente <InlineLatex math={'L_2'} /> del sistema Sol-Tierra en una órbita de halo. Su trayectoria se calcula con exactamente estas ecuaciones: el CR3BP es la base del diseño de misiones a los puntos de Lagrange desde los años 1960 (misiones ISEE-3, SOHO, WMAP, Gaia, JWST).</p>
+            <p>El simulador no reinventa la física: la reimplementa fielmente y lo demuestra conservando la única cantidad que la teoría garantiza que debe conservarse, la constante de Jacobi.</p>
+          </section>
+        </article>
+      </section>
     </section>
   )
 }

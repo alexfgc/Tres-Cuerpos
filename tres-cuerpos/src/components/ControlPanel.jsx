@@ -3,7 +3,10 @@ import PresetSelector from './PresetSelector'
 
 function Slider({
   disabled,
-  formatValue = (value) => value.toFixed(3),
+  formatValue = (value) => {
+    const normalized = Math.abs(value) < 1e-9 ? 0 : value
+    return normalized.toFixed(3)
+  },
   helpText,
   label,
   max,
@@ -23,7 +26,15 @@ function Slider({
         disabled={disabled}
         max={max}
         min={min}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => {
+          const nextValue = Number(event.target.value)
+          const zeroInRange = min <= 0 && max >= 0
+          const snapThreshold = Math.max(step / 2, 1e-9)
+          const normalized = zeroInRange && Math.abs(nextValue) <= snapThreshold
+            ? 0
+            : nextValue
+          onChange(normalized)
+        }}
         step={step}
         type="range"
         value={value}
@@ -39,6 +50,7 @@ function ControlPanel({
   initialState,
   isRunning,
   mu,
+  onSystemChange,
   onChangeDt,
   onChangeSimulationSpeed,
   onChangeInitialState,

@@ -2,12 +2,20 @@ import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import ControlPanel from './components/ControlPanel'
 import InfoPanel from './components/InfoPanel'
 import { calculateJacobi, calculateEffectivePotential } from './physics/cr3bp'
-import { BINARY_SYSTEMS, DEFAULT_DT, DEFAULT_SYSTEM_KEY } from './utils/constants'
+import {
+  BINARY_SYSTEMS,
+  DEFAULT_DT,
+  DEFAULT_SIMULATION_SPEED,
+  DEFAULT_SYSTEM_KEY,
+  DEFAULT_TRAJECTORY_LIMIT,
+} from './utils/constants'
 import { getPresetState, PRESETS } from './utils/presets'
 
 const Scene3D = lazy(() => import('./components/Scene3D'))
 
 function parseNumber(value, fallback) {
+  if (value == null) return fallback
+  if (typeof value === 'string' && value.trim() === '') return fallback
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
@@ -26,8 +34,8 @@ function getInitialConfigFromUrl() {
       showHillCurves: false,
       showLagrange: true,
       showTrajectory: true,
-      simulationSpeed: 10,
-      trajectoryLimit: 5000,
+      simulationSpeed: DEFAULT_SIMULATION_SPEED,
+      trajectoryLimit: DEFAULT_TRAJECTORY_LIMIT,
     }
   }
 
@@ -56,8 +64,8 @@ function getInitialConfigFromUrl() {
     showHillCurves: params.get('showHillCurves') === 'true',
     showLagrange: params.get('showLagrange') !== 'false',
     showTrajectory: params.get('showTrajectory') !== 'false',
-    simulationSpeed: parseNumber(params.get('speed'), 10),
-    trajectoryLimit: parseNumber(params.get('trajectoryLimit'), 5000),
+    simulationSpeed: parseNumber(params.get('speed'), DEFAULT_SIMULATION_SPEED),
+    trajectoryLimit: parseNumber(params.get('trajectoryLimit'), DEFAULT_TRAJECTORY_LIMIT),
   }
 }
 
@@ -277,6 +285,7 @@ function App() {
             initialState={initialState}
             isRunning={isRunning}
             mu={mu}
+            systemKey={systemKey}
             onTelemetry={handleTelemetry}
             resetConfig={resetConfig}
             simulationSpeed={simulationSpeed}

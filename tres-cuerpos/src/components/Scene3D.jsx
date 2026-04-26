@@ -4,12 +4,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { calculateJacobi, cr3bpDerivatives } from '../physics/cr3bp'
 import { calculateAllLagrangePoints } from '../physics/lagrangePoints'
 import { rk4Step } from '../physics/rk4'
+import { BINARY_SYSTEMS } from '../utils/constants'
 
 function Scene3D({
   dt,
   initialState,
   isRunning,
   mu,
+  systemKey,
   onTelemetry,
   resetConfig,
   simulationSpeed,
@@ -25,6 +27,7 @@ function Scene3D({
     dt,
     isRunning,
     mu,
+    systemKey,
     initialState,
     resetConfig,
     simulationSpeed,
@@ -45,6 +48,7 @@ function Scene3D({
       dt,
       isRunning,
       mu,
+      systemKey,
       initialState,
       resetConfig,
       simulationSpeed,
@@ -58,6 +62,7 @@ function Scene3D({
     dt,
     isRunning,
     mu,
+    systemKey,
     initialState,
     resetConfig,
     simulationSpeed,
@@ -74,6 +79,12 @@ function Scene3D({
 
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x000000)
+
+    const systemConfig = BINARY_SYSTEMS[systemKey] ?? BINARY_SYSTEMS.SUN_EARTH
+    const primaryColors = systemConfig.primaryColors ?? {
+      m1: 0xffd700,
+      m2: 0x4a90e2,
+    }
 
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -95,15 +106,15 @@ function Scene3D({
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
     scene.add(ambientLight)
 
-    const pointLight = new THREE.PointLight(0xffffff, 0.8)
+    const pointLight = new THREE.PointLight(primaryColors.m1, 0.8)
     pointLight.position.set(-mu, 0, 0)
     scene.add(pointLight)
 
     const sun = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 32, 32),
       new THREE.MeshStandardMaterial({
-        color: 0xffd700,
-        emissive: 0xffd700,
+        color: primaryColors.m1,
+        emissive: primaryColors.m1,
         emissiveIntensity: 0.5,
         metalness: 0,
         roughness: 0.3,
@@ -116,7 +127,7 @@ function Scene3D({
     const earth = new THREE.Mesh(
       new THREE.SphereGeometry(0.03, 32, 32),
       new THREE.MeshStandardMaterial({
-        color: 0x4a90e2,
+        color: primaryColors.m2,
         metalness: 0.1,
         roughness: 0.6,
       }),
@@ -424,8 +435,12 @@ function Scene3D({
       } else {
         physicsAccumulatorRef.current = 0
         lastFrameTimeRef.current = timestamp
-        stateRef.current = { ...currentInitialState }
-        satellite.position.set(currentInitialState.x, currentInitialState.y, currentInitialState.z)
+
+        // Keep paused simulations at their current state; only mirror slider edits before first run (t = 0).
+        if (timeRef.current === 0) {
+          stateRef.current = { ...currentInitialState }
+          satellite.position.set(currentInitialState.x, currentInitialState.y, currentInitialState.z)
+        }
       }
 
       controls.update()
@@ -456,7 +471,7 @@ function Scene3D({
         container.removeChild(renderer.domElement)
       }
     }
-  }, [mu, hillJacobi, onTelemetry, transitionDurationMs])
+  }, [mu, systemKey, hillJacobi, onTelemetry, transitionDurationMs])
 
   return (
     <div className="h-[60vh] min-h-[420px] overflow-hidden rounded-xl border border-white/20 md:h-[72vh]" ref={containerRef} />

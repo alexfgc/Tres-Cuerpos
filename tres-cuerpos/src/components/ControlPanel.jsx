@@ -4,10 +4,7 @@ import PresetSelector from './PresetSelector'
 
 function Slider({
   disabled,
-  formatValue = (value) => {
-    const normalized = Math.abs(value) < 1e-9 ? 0 : value
-    return normalized.toFixed(3)
-  },
+  formatValue,
   helpText,
   label,
   max,
@@ -24,6 +21,15 @@ function Slider({
     const decimalPart = stepAsText.includes('.') ? stepAsText.split('.')[1] : ''
     return decimalPart.length
   }, [step])
+
+  const resolvedFormatValue = useMemo(() => {
+    if (formatValue) return formatValue
+    return (nextValue) => {
+      const normalized = Math.abs(nextValue) < 1e-9 ? 0 : nextValue
+      const decimalDigits = Math.max(stepDecimals, 3)
+      return normalized.toFixed(decimalDigits)
+    }
+  }, [formatValue, stepDecimals])
 
   useEffect(() => {
     if (!isEditingValue) {
@@ -84,7 +90,7 @@ function Slider({
             title="Click para editar manualmente"
             type="button"
           >
-            {formatValue(value)}
+            {resolvedFormatValue(value)}
           </button>
         )}
       </div>
@@ -205,7 +211,7 @@ function ControlPanel({
           max={2}
           min={-2}
           onChange={(value) => onChangeInitialState('x', value)}
-          step={0.01}
+          step={0.001}
           value={initialState.x}
         />
         <Slider
@@ -215,7 +221,7 @@ function ControlPanel({
           max={2}
           min={-2}
           onChange={(value) => onChangeInitialState('y', value)}
-          step={0.01}
+          step={0.001}
           value={initialState.y}
         />
         <Slider
@@ -225,7 +231,7 @@ function ControlPanel({
           max={2}
           min={-2}
           onChange={(value) => onChangeInitialState('z', value)}
-          step={0.01}
+          step={0.001}
           value={initialState.z}
         />
       </div>
@@ -238,7 +244,7 @@ function ControlPanel({
           max={2}
           min={-2}
           onChange={(value) => onChangeInitialState('vx', value)}
-          step={0.01}
+          step={0.001}
           value={initialState.vx}
         />
         <Slider
@@ -248,7 +254,7 @@ function ControlPanel({
           max={2}
           min={-2}
           onChange={(value) => onChangeInitialState('vy', value)}
-          step={0.01}
+          step={0.001}
           value={initialState.vy}
         />
         <Slider
@@ -258,7 +264,7 @@ function ControlPanel({
           max={2}
           min={-2}
           onChange={(value) => onChangeInitialState('vz', value)}
-          step={0.01}
+          step={0.001}
           value={initialState.vz}
         />
       </div>

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import PresetSelector from './PresetSelector'
 
@@ -15,11 +16,77 @@ function Slider({
   step,
   value,
 }) {
+  const [isEditingValue, setIsEditingValue] = useState(false)
+  const [inputValue, setInputValue] = useState('')
+
+  const stepDecimals = useMemo(() => {
+    const stepAsText = String(step)
+    const decimalPart = stepAsText.includes('.') ? stepAsText.split('.')[1] : ''
+    return decimalPart.length
+  }, [step])
+
+  useEffect(() => {
+    if (!isEditingValue) {
+      setInputValue(String(value))
+    }
+  }, [isEditingValue, value])
+
+  const normalizeValue = (nextValue) => {
+    const clamped = Math.min(max, Math.max(min, nextValue))
+    const rounded = Number(clamped.toFixed(stepDecimals))
+    const zeroInRange = min <= 0 && max >= 0
+    const snapThreshold = Math.max(step / 2, 1e-9)
+    return zeroInRange && Math.abs(rounded) <= snapThreshold ? 0 : rounded
+  }
+
+  const commitManualValue = () => {
+    const parsed = Number(inputValue.replace(',', '.'))
+    if (Number.isFinite(parsed)) {
+      onChange(normalizeValue(parsed))
+    }
+    setIsEditingValue(false)
+  }
+
+  const cancelManualEdit = () => {
+    setInputValue(String(value))
+    setIsEditingValue(false)
+  }
+
   return (
     <label className="block">
       <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-wide text-white/70">
         <span title={helpText}>{label}</span>
-        <span className="font-mono text-white/90">{formatValue(value)}</span>
+        {isEditingValue ? (
+          <input
+            aria-label={`Valor de ${label}`}
+            autoFocus
+            className="w-24 rounded border border-white/30 bg-black/50 px-2 py-0.5 text-right font-mono text-xs normal-case text-white outline-none focus:border-accent"
+            disabled={disabled}
+            inputMode="decimal"
+            onBlur={commitManualValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                commitManualValue()
+              }
+              if (event.key === 'Escape') {
+                cancelManualEdit()
+              }
+            }}
+            type="text"
+            value={inputValue}
+          />
+        ) : (
+          <button
+            className="rounded px-1 font-mono text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            disabled={disabled}
+            onClick={() => setIsEditingValue(true)}
+            title="Click para editar manualmente"
+            type="button"
+          >
+            {formatValue(value)}
+          </button>
+        )}
       </div>
       <input
         className="w-full accent-accent disabled:cursor-not-allowed disabled:opacity-50"
@@ -28,12 +95,7 @@ function Slider({
         min={min}
         onChange={(event) => {
           const nextValue = Number(event.target.value)
-          const zeroInRange = min <= 0 && max >= 0
-          const snapThreshold = Math.max(step / 2, 1e-9)
-          const normalized = zeroInRange && Math.abs(nextValue) <= snapThreshold
-            ? 0
-            : nextValue
-          onChange(normalized)
+          onChange(normalizeValue(nextValue))
         }}
         step={step}
         type="range"

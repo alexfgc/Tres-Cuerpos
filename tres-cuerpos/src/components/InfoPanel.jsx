@@ -381,10 +381,10 @@ function InfoPanel({ energy, initialJacobi, jacobi, r1, r2, state, time }) {
           <section className="space-y-3">
             <h4 className="font-display text-sm font-semibold text-white">El principio fundamental: discretizar el tiempo</h4>
             <p>
-              Las ecuaciones del CR3BP son <strong>ecuaciones diferenciales continuas</strong>: describen cómo cambia el estado del satélite en cada instante infinitesimal. Un ordenador no puede operar con infinitos; necesita saltar de un instante al siguiente en pasos discretos de tamaño <InlineLatex math={'\Delta t'} />.
+              Las ecuaciones del CR3BP son <strong>ecuaciones diferenciales continuas</strong>: describen cómo cambia el estado del satélite en cada instante infinitesimal. Un ordenador no puede operar con infinitos; necesita saltar de un instante al siguiente en pasos discretos de tamaño <InlineLatex math={'\\Delta t'} />.
             </p>
             <p>
-              La pregunta central del simulador es: dado el estado del satélite en el instante <InlineLatex math={'t_n'} />, ¿cómo se calcula el estado en <InlineLatex math={'t_{n+1} = t_n + \Delta t'} />?
+              La pregunta central del simulador es: dado el estado del satélite en el instante <InlineLatex math={'t_n'} />, ¿cómo se calcula el estado en <InlineLatex math={'t_{n+1} = t_n + \\Delta t'} />?
             </p>
             <p>Toda la cadena de archivos de código es la respuesta a esa pregunta.</p>
           </section>
@@ -392,15 +392,15 @@ function InfoPanel({ energy, initialJacobi, jacobi, r1, r2, state, time }) {
           <section className="space-y-3">
             <h4 className="font-display text-sm font-semibold text-white">El vector de estado: la física comprimida en 6 números</h4>
             <p>
-              Las ecuaciones del CR3BP son de <strong>segundo orden</strong> (contienen <InlineLatex math={'\ddot{x}'} />, <InlineLatex math={'\ddot{y}'} />, <InlineLatex math={'\ddot{z}'} />). Para aplicar RK4, que opera sobre sistemas de primer orden, se introduce el truco estándar de convertir las velocidades en variables independientes.
+              Las ecuaciones del CR3BP son de <strong>segundo orden</strong> (contienen <InlineLatex math={'\\ddot{x}'} />, <InlineLatex math={'\\ddot{y}'} />, <InlineLatex math={'\\ddot{z}'} />). Para aplicar RK4, que opera sobre sistemas de primer orden, se introduce el truco estándar de convertir las velocidades en variables independientes.
             </p>
             <p>Se define el <strong>vector de estado</strong>:</p>
             <div className="overflow-x-auto text-white/90">
-              <BlockLatex math={'\mathbf{y} = (x,\; y,\; z,\; v_x,\; v_y,\; v_z)^\top'} />
+              <BlockLatex math={'\\mathbf{y} = (x,\\; y,\\; z,\\; v_x,\\; v_y,\\; v_z)^\\top'} />
             </div>
             <p>Con él, el sistema de segundo orden se reescribe como:</p>
             <div className="overflow-x-auto text-white/90">
-              <BlockLatex math={'\frac{d\mathbf{y}}{dt} = \mathbf{f}(t, \mathbf{y}) = \begin{pmatrix}v_x \\ v_y \\ v_z \\ a_x(x,y,z,v_x,v_y) \\ a_y(x,y,z,v_x,v_y) \\ a_z(x,y,z)\end{pmatrix}'} />
+              <BlockLatex math={'\\frac{d\\mathbf{y}}{dt} = \\mathbf{f}(t, \\mathbf{y}) = \\begin{pmatrix}v_x \\\\ v_y \\\\ v_z \\\\ a_x(x,y,z,v_x,v_y) \\\\ a_y(x,y,z,v_x,v_y) \\\\ a_z(x,y,z)\\end{pmatrix}'} />
             </div>
             <p>donde las aceleraciones son las ecuaciones del CR3BP derivadas en la sección anterior. En el código, el vector de estado se representa como un objeto JavaScript:</p>
             <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`state = {
@@ -432,7 +432,7 @@ function InfoPanel({ energy, initialJacobi, jacobi, r1, r2, state, time }) {
 }`}</code></pre>
             <p>La correspondencia entre física y código es directa y sin aproximaciones:</p>
             <div className="overflow-x-auto text-white/90">
-              <BlockLatex math={'\begin{array}{ll}\text{Ecuación física} & \text{Línea de código}\\\hline r_1 = \sqrt{(x+\mu)^2 + y^2 + z^2} & \texttt{Math.sqrt((x + mu)**2 + y**2 + z**2)}\\ \ddot{x} = 2\dot{y} + x - \frac{(1-\mu)(x+\mu)}{r_1^3} - \frac{\mu(x-1+\mu)}{r_2^3} & \texttt{ax = 2*vy + x - (1-mu)*(x+mu)/r1**3 - ...}\\ \ddot{y} = -2\dot{x} + y - \frac{(1-\mu)y}{r_1^3} - \frac{\mu y}{r_2^3} & \texttt{ay = -2*vx + y - (1-mu)*y/r1**3 - ...}\\ \ddot{z} = -\frac{(1-\mu)z}{r_1^3} - \frac{\mu z}{r_2^3} & \texttt{az = -(1-mu)*z/r1**3 - mu*z/r2**3}\end{array}'} />
+              <BlockLatex math={'\\begin{array}{ll}\\text{Ecuación física} & \\text{Línea de código}\\\\\\hline r_1 = \\sqrt{(x+\\mu)^2 + y^2 + z^2} & \\texttt{Math.sqrt((x + mu)**2 + y**2 + z**2)}\\\\ \\ddot{x} = 2\\dot{y} + x - \\frac{(1-\\mu)(x+\\mu)}{r_1^3} - \\frac{\\mu(x-1+\\mu)}{r_2^3} & \\texttt{ax = 2*vy + x - (1-mu)*(x+mu)/r1**3 - ...}\\\\ \\ddot{y} = -2\\dot{x} + y - \\frac{(1-\\mu)y}{r_1^3} - \\frac{\\mu y}{r_2^3} & \\texttt{ay = -2*vx + y - (1-mu)*y/r1**3 - ...}\\\\ \\ddot{z} = -\\frac{(1-\\mu)z}{r_1^3} - \\frac{\\mu z}{r_2^3} & \\texttt{az = -(1-mu)*z/r1**3 - mu*z/r2**3}\\end{array}'} />
             </div>
             <p>
               Los términos <InlineLatex math={'+2*vy'} /> en <InlineLatex math={'ax'} /> y <InlineLatex math={'-2*vx'} /> en <InlineLatex math={'ay'} /> son la <strong>aceleración de Coriolis</strong> en el marco rotante. Si se omitieran, las trayectorias serían físicamente incorrectas aunque el integrador fuera perfecto.
@@ -490,9 +490,9 @@ satelliteState = rk4Step(
 }`}</code></pre>
 
             <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">L1, L2, L3 --- Newton-Raphson</h5>
-            <p>La condición <InlineLatex math={'\partial U/\partial x = 0'} /> sobre el eje <InlineLatex math={'x'} /> produce una ecuación de quinto grado sin solución analítica. Se resuelve numéricamente con Newton-Raphson:</p>
+            <p>La condición <InlineLatex math={'\\partial U/\\partial x = 0'} /> sobre el eje <InlineLatex math={'x'} /> produce una ecuación de quinto grado sin solución analítica. Se resuelve numéricamente con Newton-Raphson:</p>
             <div className="overflow-x-auto text-white/90">
-              <BlockLatex math={"x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}"} />
+              <BlockLatex math={"x_{n+1} = x_n - \\frac{f(x_n)}{f'(x_n)}"} />
             </div>
             <pre className="overflow-x-auto rounded-lg border border-white/15 bg-black/35 p-3 text-xs text-white/90"><code>{`function newtonRaphson(f, df, x0, tolerance, maxIter) { ... }
 
@@ -523,12 +523,12 @@ function calculateL3(mu) { /* punto de inicio lado opuesto */  }`}</code></pre>
               Si el integrador fuera incorrecto, <InlineLatex math={'C_J'} /> derivaría con el tiempo de forma sistemática y detectable.
               El archivo scripts/validate-physics.mjs verificó esta conservación antes del despliegue, con el resultado: “Conservación de Jacobi: error <InlineLatex math={'< 0.1\,\%'} />”.
             </p>
-            <p>El <InlineLatex math={'0.1\,\%'} /> no es un error del modelo físico sino el <strong>error numérico inevitable de RK4</strong> con el <InlineLatex math={'\Delta t'} /> elegido, completamente esperado y aceptable para visualización interactiva.</p>
+            <p>El <InlineLatex math={'0.1\\,\\%'} /> no es un error del modelo físico sino el <strong>error numérico inevitable de RK4</strong> con el <InlineLatex math={'\\Delta t'} /> elegido, completamente esperado y aceptable para visualización interactiva.</p>
 
             <h5 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Nivel 2 --- Posiciones de los Puntos de Lagrange vs. referencias</h5>
-            <p>Las posiciones calculadas por Newton-Raphson se cotejaron contra valores publicados en la literatura de mecánica celeste. Para el sistema Sol-Tierra (<InlineLatex math={'\mu = 3.04 \times 10^{-6}'} />), los valores de referencia son:</p>
+            <p>Las posiciones calculadas por Newton-Raphson se cotejaron contra valores publicados en la literatura de mecánica celeste. Para el sistema Sol-Tierra (<InlineLatex math={'\\mu = 3.04 \\times 10^{-6}'} />), los valores de referencia son:</p>
             <div className="overflow-x-auto text-white/90">
-              <BlockLatex math={'\begin{array}{lcc}\text{Punto} & \text{Posición }x\text{ (unidades norm.)} & \text{Interpretación física}\\\hline L_1 & \approx 0.9900 & \text{Entre Sol y Tierra}\\ L_2 & \approx 1.0100 & \text{Detrás de la Tierra}\\ L_3 & \approx -1.0000 & \text{Lado opuesto al Sol}\end{array}'} />
+              <BlockLatex math={'\\begin{array}{lcc}\\text{Punto} & \\text{Posición }x\\text{ (unidades norm.)} & \\text{Interpretación física}\\\\\\hline L_1 & \\approx 0.9900 & \\text{Entre Sol y Tierra}\\\\ L_2 & \\approx 1.0100 & \\text{Detrás de la Tierra}\\\\ L_3 & \\approx -1.0000 & \\text{Lado opuesto al Sol}\\end{array}'} />
             </div>
             <p>Un error en el Newton-Raphson produciría puntos desplazados respecto a las posiciones físicamente estables, detectable visualmente porque el satélite no permanecería cerca de ellos.</p>
 
@@ -540,7 +540,7 @@ function calculateL3(mu) { /* punto de inicio lado opuesto */  }`}</code></pre>
             <h4 className="font-display text-sm font-semibold text-white">El mapa completo: de la ecuación diferencial a los píxeles</h4>
             <p>La siguiente tabla resume la cadena completa desde la física continua hasta la representación visual:</p>
             <div className="overflow-x-auto text-white/90">
-              <BlockLatex math={'\begin{array}{ll}\textbf{Física (continua)} & \textbf{Código (discreto)}\\\hline \text{Ecuaciones del CR3BP }\ddot{x} - 2\dot{y} = \partial U/\partial x & \texttt{cr3bpDerivatives(t, state, mu)}\\ \text{Vector de estado }\mathbf{y} = (x,y,z,v_x,v_y,v_z)^\top & \texttt{state = \{x, y, z, vx, vy, vz\}}\\ \text{Integrador RK4 }\mathbf{y}_{n+1} = \mathbf{y}_n + \frac{\Delta t}{6}(\cdots) & \texttt{rk4Step(...)}\text{ llamado en cada frame}\\ \text{Constante de Jacobi }C_J = -2U - v^2 = \text{cte} & \texttt{calculateJacobi(state, mu), error }<0.1\,\%\\ L_4,L_5\text{: fórmula exacta} & \texttt{calculateL4L5(mu)}\\ L_1,L_2,L_3\text{: ec. de quinto grado} & \texttt{newtonRaphson(...)}\text{ validado vs. papers}\\ \text{Posición }(x,y,z)\text{ en unidades normalizadas} & \texttt{satellite.position.set(state.x, state.y, state.z)}\\ \text{Historia de posiciones (trayectoria)} & \texttt{BufferGeometry, 5,000 puntos FIFO, degradado blanco }\to\text{ cyan}\end{array}'} />
+              <BlockLatex math={'\\begin{array}{ll}\\textbf{Física (continua)} & \\textbf{Código (discreto)}\\\\\\hline \\text{Ecuaciones del CR3BP }\\ddot{x} - 2\\dot{y} = \\partial U/\\partial x & \\texttt{cr3bpDerivatives(t, state, mu)}\\\\ \\text{Vector de estado }\\mathbf{y} = (x,y,z,v_x,v_y,v_z)^\\top & \\texttt{state = \\{x, y, z, vx, vy, vz\\}}\\\\ \\text{Integrador RK4 }\\mathbf{y}_{n+1} = \\mathbf{y}_n + \\frac{\\Delta t}{6}(\\cdots) & \\texttt{rk4Step(...)}\\text{ llamado en cada frame}\\\\ \\text{Constante de Jacobi }C_J = -2U - v^2 = \\text{cte} & \\texttt{calculateJacobi(state, mu), error }<0.1\\,\\%\\\\ L_4,L_5\\text{: fórmula exacta} & \\texttt{calculateL4L5(mu)}\\\\ L_1,L_2,L_3\\text{: ec. de quinto grado} & \\texttt{newtonRaphson(...)}\\text{ validado vs. papers}\\\\ \\text{Posición }(x,y,z)\\text{ en unidades normalizadas} & \\texttt{satellite.position.set(state.x, state.y, state.z)}\\\\ \\text{Historia de posiciones (trayectoria)} & \\texttt{BufferGeometry, 5,000 puntos FIFO, degradado blanco }\\to\\text{ cyan}\\end{array}'} />
             </div>
           </section>
 

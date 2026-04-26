@@ -1,6 +1,7 @@
-import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import ControlPanel from './components/ControlPanel'
 import InfoPanel from './components/InfoPanel'
+import Scene3D from './components/Scene3D'
 import { calculateJacobi, calculateEffectivePotential } from './physics/cr3bp'
 import {
   BINARY_SYSTEMS,
@@ -10,8 +11,6 @@ import {
   DEFAULT_TRAJECTORY_LIMIT,
 } from './utils/constants'
 import { getPresetState, PRESETS } from './utils/presets'
-
-const Scene3D = lazy(() => import('./components/Scene3D'))
 
 function parseNumber(value, fallback) {
   if (value == null) return fallback
@@ -273,30 +272,22 @@ function App() {
           showTrajectory={showTrajectory}
           shareStatus={shareStatus}
         />
-        <Suspense
-          fallback={
-            <div className="flex h-[60vh] min-h-[420px] items-center justify-center rounded-xl border border-white/20 bg-black/30 md:h-[72vh]">
-              <p className="text-sm text-white/70">Inicializando escena 3D...</p>
-            </div>
-          }
-        >
-          <Scene3D
-            dt={dt}
-            initialState={initialState}
-            isRunning={isRunning}
-            mu={mu}
-            systemKey={systemKey}
-            onTelemetry={handleTelemetry}
-            resetConfig={resetConfig}
-            simulationSpeed={simulationSpeed}
-            showLagrange={showLagrange}
-            showTrajectory={showTrajectory}
-            showHillCurves={showHillCurves}
-            trajectoryLimit={trajectoryLimit}
-            hillJacobi={initialJacobi}
-            transitionDurationMs={500}
-          />
-        </Suspense>
+        <Scene3D
+          dt={dt}
+          initialState={initialState}
+          isRunning={isRunning}
+          mu={mu}
+          systemKey={systemKey}
+          onTelemetry={handleTelemetry}
+          resetConfig={resetConfig}
+          simulationSpeed={simulationSpeed}
+          showLagrange={showLagrange}
+          showTrajectory={showTrajectory}
+          showHillCurves={showHillCurves}
+          trajectoryLimit={trajectoryLimit}
+          hillJacobi={initialJacobi}
+          transitionDurationMs={500}
+        />
       </section>
 
       <section className="px-4 pb-6 md:px-6">
